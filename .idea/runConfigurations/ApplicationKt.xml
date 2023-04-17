@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ApplicationKt" type="JetRunConfigurationType" nameIsGenerated="true">
+    <envs>
+      <env name="MONGO_PW" value="opzkTw9KQoY2BLQQ" />
+      <env name="JWT_SECRET" value="jwt-secret" />
+    </envs>
+    <option name="MAIN_CLASS_NAME" value="dam.adrianoliva.ApplicationKt" />
+    <module name="dam.adrianoliva.backend.main" />
+    <shortenClasspath name="NONE" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
