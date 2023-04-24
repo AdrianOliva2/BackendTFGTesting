@@ -1,6 +1,8 @@
 package dam.adrianoliva
 
 import dam.adrianoliva.data.employee.EmployeeDTS
+import dam.adrianoliva.data.item.Item
+import dam.adrianoliva.data.item.ItemDTS
 import dam.adrianoliva.data.order.Order
 import dam.adrianoliva.data.order.OrderDTS
 import dam.adrianoliva.data.request.CreateOrderRequest
@@ -26,7 +28,8 @@ fun Route.getOrder(
             status = HttpStatusCode.OK,
             message = orders.map {
                 OrderResponse(
-                    items = it.items,
+                    id = it.id.toString(),
+                    items = it.items.map { item -> item.id.toString() },
                     total = it.total,
                     completed = it.completed
                 )
@@ -60,7 +63,8 @@ fun Route.getOrder(
         call.respond(
             status = HttpStatusCode.OK,
             message = OrderResponse(
-                items = order.items,
+                id = order.id.toString(),
+                items = order.items.map { item -> item.id.toString() },
                 total = order.total,
                 completed = order.completed
             )
@@ -119,6 +123,7 @@ fun Route.getWhoServed(
 }
 
 fun Route.createOrder(
+    itemDTS: ItemDTS,
     employeeDTS: EmployeeDTS,
     orderDTS: OrderDTS
 ) {
@@ -159,9 +164,22 @@ fun Route.createOrder(
                 )
                 return@post
             }
+            val items: List<Item> = request.items.map { item ->
+                val item = itemDTS.getItemById(item)
+                if (item == null) {
+                    call.respond(
+                        status = HttpStatusCode.NotFound,
+                        message = ErrorResponse(
+                            error = "The item doesn't exist"
+                        )
+                    )
+                    return@post
+                }
+                item
+            }
             val order = Order(
-                items = request.items,
-                total = request.items.sumOf { it.price },
+                items = items,
+                total = items.sumOf { item -> item.price },
                 servedby = ObjectId(employeeId)
             )
             val addedOrder = orderDTS.addOrder(order)
@@ -169,7 +187,8 @@ fun Route.createOrder(
                 call.respond(
                     status = HttpStatusCode.Created,
                     message = OrderResponse(
-                        items = order.items,
+                        id = order.id.toString(),
+                        items = order.items.map { item -> item.id.toString() },
                         total = order.total,
                         completed = order.completed
                     )
@@ -182,6 +201,7 @@ fun Route.createOrder(
 }
 
 fun Route.updateOrder(
+    itemDTS: ItemDTS,
     employeeDTS: EmployeeDTS,
     orderDTS: OrderDTS
 ) {
@@ -245,10 +265,23 @@ fun Route.updateOrder(
                 )
                 return@put
             }
+            val items: List<Item> = request.items.map { item ->
+                val item = itemDTS.getItemById(item)
+                if (item == null) {
+                    call.respond(
+                        status = HttpStatusCode.NotFound,
+                        message = ErrorResponse(
+                            error = "The item doesn't exist"
+                        )
+                    )
+                    return@put
+                }
+                item
+            }
             val order = Order(
                 id = ObjectId(orderId),
-                items = request.items,
-                total = request.items.sumOf { it.price },
+                items = items,
+                total = items.sumOf { it.price },
                 servedby = ObjectId(employeeId),
                 completed = false
             )
@@ -257,7 +290,8 @@ fun Route.updateOrder(
                 call.respond(
                     status = HttpStatusCode.OK,
                     message = OrderResponse(
-                        items = order.items,
+                        id = order.id.toString(),
+                        items = order.items.map { item -> item.id.toString() },
                         total = order.total,
                         completed = order.completed
                     )
@@ -270,6 +304,7 @@ fun Route.updateOrder(
 }
 
 fun Route.deleteOrder(
+    itemDTS: ItemDTS,
     employeeDTS: EmployeeDTS,
     orderDTS: OrderDTS
 ) {
@@ -328,12 +363,26 @@ fun Route.deleteOrder(
                 )
                 return@delete
             }
+            val originalOrderItems: List<Item> = originalOrder.items.map { item ->
+                val item = itemDTS.getItemById(item.id.toString())
+                if (item == null) {
+                    call.respond(
+                        status = HttpStatusCode.NotFound,
+                        message = ErrorResponse(
+                            error = "The item doesn't exist"
+                        )
+                    )
+                    return@delete
+                }
+                item
+            }
             val deletedOrder = orderDTS.deleteOrder(orderId)
             if (deletedOrder) {
                 call.respond(
                     status = HttpStatusCode.OK,
                     message = OrderResponse(
-                        items = originalOrder.items,
+                        id = originalOrder.id.toString(),
+                        items = originalOrderItems.map { item -> item.id.toString() },
                         total = originalOrder.total,
                         completed = originalOrder.completed
                     )
@@ -346,6 +395,7 @@ fun Route.deleteOrder(
 }
 
 fun Route.completeOrder(
+    itemDTS: ItemDTS,
     employeeDTS: EmployeeDTS,
     orderDTS: OrderDTS
 ) {
@@ -387,12 +437,26 @@ fun Route.completeOrder(
                 return@put
             }
             order.completed = !order.completed
+            val orderItems: List<Item> = order.items.map { item ->
+                val item = itemDTS.getItemById(item.id.toString())
+                if (item == null) {
+                    call.respond(
+                        status = HttpStatusCode.NotFound,
+                        message = ErrorResponse(
+                            error = "The item doesn't exist"
+                        )
+                    )
+                    return@put
+                }
+                item
+            }
             val updatedOrder = orderDTS.updateOrder(order)
             if (updatedOrder) {
                 call.respond(
                     status = HttpStatusCode.Accepted,
                     message = OrderResponse(
-                        items = order.items,
+                        id = order.id.toString(),
+                        items = orderItems.map { item -> item.id.toString() },
                         total = order.total,
                         completed = order.completed
                     )
